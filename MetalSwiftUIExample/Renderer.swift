@@ -197,7 +197,7 @@ class Renderer: NSObject, MetalViewDelegate {
         rotation += 0.01
     }
     
-    func draw(in view: MetalView) {
+    func draw(in view: MetalView, drawable: CAMetalDrawable) {
         /// Per frame updates hare
         
         _ = inFlightSemaphore.wait(timeout: DispatchTime.distantFuture)
@@ -213,11 +213,13 @@ class Renderer: NSObject, MetalViewDelegate {
             
             self.updateGameState()
             
-            /// Delay getting the currentRenderPassDescriptor until we absolutely need it to avoid
-            ///   holding onto the drawable and blocking the display pipeline any longer than necessary
-            let renderPassDescriptor = view.currentRenderPassDescriptor
-            
-            if let renderPassDescriptor = renderPassDescriptor, let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) {
+            let renderPassDescriptor = MTLRenderPassDescriptor()
+            renderPassDescriptor.colorAttachments[0].texture = drawable.texture
+            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0, 0.5, 0, 1)
+            renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreAction.store
+            renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadAction.clear
+
+            if let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) {
                 
                 /// Final pass rendering code here
                 renderEncoder.label = "Primary Render Encoder"
@@ -259,9 +261,7 @@ class Renderer: NSObject, MetalViewDelegate {
                 
                 renderEncoder.endEncoding()
                 
-                if let drawable = view.currentDrawable {
-                    commandBuffer.present(drawable)
-                }
+                commandBuffer.present(drawable)
             }
             
             commandBuffer.commit()
