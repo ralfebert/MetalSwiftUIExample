@@ -20,13 +20,12 @@ enum RendererError: Error {
     case badVertexDescriptor
 }
 
-class Renderer: NSObject, MTKViewDelegate {
+class Renderer: NSObject, MetalViewDelegate {
     
     public let device: MTLDevice
     let commandQueue: MTLCommandQueue
     var dynamicUniformBuffer: MTLBuffer
     var pipelineState: MTLRenderPipelineState
-    var depthState: MTLDepthStencilState
     var colorMap: MTLTexture
     
     let inFlightSemaphore = DispatchSemaphore(value: maxBuffersInFlight)
@@ -43,8 +42,8 @@ class Renderer: NSObject, MTKViewDelegate {
     
     var mesh: MTKMesh
     
-    init?(metalKitView: MTKView) {
-        self.device = metalKitView.device!
+    init?(metalKitView: MetalView) {
+        self.device = metalKitView.device
         guard let queue = self.device.makeCommandQueue() else { return nil }
         self.commandQueue = queue
         
@@ -56,11 +55,7 @@ class Renderer: NSObject, MTKViewDelegate {
         self.dynamicUniformBuffer.label = "UniformBuffer"
         
         uniforms = UnsafeMutableRawPointer(dynamicUniformBuffer.contents()).bindMemory(to:Uniforms.self, capacity:1)
-        
-        metalKitView.depthStencilPixelFormat = MTLPixelFormat.depth32Float_stencil8
-        metalKitView.colorPixelFormat = MTLPixelFormat.bgra8Unorm_srgb
-        metalKitView.sampleCount = 1
-        
+                
         let mtlVertexDescriptor = Renderer.buildMetalVertexDescriptor()
         
         do {
@@ -71,13 +66,7 @@ class Renderer: NSObject, MTKViewDelegate {
             print("Unable to compile render pipeline state.  Error info: \(error)")
             return nil
         }
-        
-        let depthStateDescriptor = MTLDepthStencilDescriptor()
-        depthStateDescriptor.depthCompareFunction = MTLCompareFunction.less
-        depthStateDescriptor.isDepthWriteEnabled = true
-        guard let state = device.makeDepthStencilState(descriptor:depthStateDescriptor) else { return nil }
-        depthState = state
-        
+                
         do {
             mesh = try Renderer.buildMesh(device: device, mtlVertexDescriptor: mtlVertexDescriptor)
         } catch {
@@ -122,7 +111,7 @@ class Renderer: NSObject, MTKViewDelegate {
     }
     
     class func buildRenderPipelineWithDevice(device: MTLDevice,
-                                             metalKitView: MTKView,
+                                             metalKitView: MetalView,
                                              mtlVertexDescriptor: MTLVertexDescriptor) throws -> MTLRenderPipelineState {
         /// Build a render state pipeline object
         
@@ -133,17 +122,15 @@ class Renderer: NSObject, MTKViewDelegate {
         
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.label = "RenderPipeline"
-        pipelineDescriptor.rasterSampleCount = metalKitView.sampleCount
         pipelineDescriptor.vertexFunction = vertexFunction
         pipelineDescriptor.fragmentFunction = fragmentFunction
         pipelineDescriptor.vertexDescriptor = mtlVertexDescriptor
         
         pipelineDescriptor.colorAttachments[0].pixelFormat = metalKitView.colorPixelFormat
-        pipelineDescriptor.depthAttachmentPixelFormat = metalKitView.depthStencilPixelFormat
-        pipelineDescriptor.stencilAttachmentPixelFormat = metalKitView.depthStencilPixelFormat
         
         return try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
     }
+    
     
     class func buildMesh(device: MTLDevice,
                          mtlVertexDescriptor: MTLVertexDescriptor) throws -> MTKMesh {
@@ -210,7 +197,7 @@ class Renderer: NSObject, MTKViewDelegate {
         rotation += 0.01
     }
     
-    func draw(in view: MTKView) {
+    func draw(in view: MetalView) {
         /// Per frame updates hare
         
         _ = inFlightSemaphore.wait(timeout: DispatchTime.distantFuture)
@@ -242,8 +229,6 @@ class Renderer: NSObject, MTKViewDelegate {
                 renderEncoder.setFrontFacing(.counterClockwise)
                 
                 renderEncoder.setRenderPipelineState(pipelineState)
-                
-                renderEncoder.setDepthStencilState(depthState)
                 
                 renderEncoder.setVertexBuffer(dynamicUniformBuffer, offset:uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
                 renderEncoder.setFragmentBuffer(dynamicUniformBuffer, offset:uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
@@ -283,7 +268,7 @@ class Renderer: NSObject, MTKViewDelegate {
         }
     }
     
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+    func mtkView(_ view: MetalView, drawableSizeWillChange size: CGSize) {
         /// Respond to drawable size or orientation changes here
         
         let aspect = Float(size.width) / Float(size.height)
