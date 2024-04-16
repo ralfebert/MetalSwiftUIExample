@@ -39,6 +39,8 @@ class Renderer: NSObject, MetalViewDelegate {
 
     let log = Logger(subsystem: "com.example.ExampleApp", category: "Renderer")
     let signposter = OSSignposter()
+    
+    var skipNextFrame = false
 
     init?(metalView: MetalView) {
         device = metalView.device
@@ -198,6 +200,17 @@ class Renderer: NSObject, MetalViewDelegate {
 
     func draw(in view: MetalView) {
 
+        do {
+            objc_sync_enter(self)
+            defer {
+                objc_sync_exit(self)
+            }
+            if self.skipNextFrame {
+                self.skipNextFrame = false
+                return
+            }
+        }
+
         let signpostID = signposter.makeSignpostID()
         let signpostName: StaticString = "Renderer draw"
         let state = signposter.beginInterval(signpostName, id: signpostID)
@@ -278,11 +291,24 @@ class Renderer: NSObject, MetalViewDelegate {
                 renderEncoder.popDebugGroup()
 
                 renderEncoder.endEncoding()
-
-                commandBuffer.present(drawable)
             }
 
             commandBuffer.commit()
+            
+            commandBuffer.waitUntilScheduled()
+            
+            let targetTimestamp = view.displayLink.targetTimestamp
+            drawable.addPresentedHandler { drawable in
+                let presentedAfter = drawable.presentedTime - targetTimestamp
+                if presentedAfter > ((1/60.0) * 1.5) {
+                    print("frame was presented after \(presentedAfter) -> skipping a frame")
+                    objc_sync_enter(self)
+                    self.skipNextFrame = true
+                    objc_sync_exit(self)
+                }
+            }
+            
+            drawable.present()
         }
     }
 

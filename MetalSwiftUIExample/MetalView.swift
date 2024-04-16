@@ -48,6 +48,7 @@ open class MetalView: UIView {
         self.metalLayer = self.layer as! CAMetalLayer
         self.metalLayer.pixelFormat = MTLPixelFormat.bgra8Unorm
         self.metalLayer.device = device
+        self.metalLayer.presentsWithTransaction = true
     }
 
     @available(*, unavailable)
