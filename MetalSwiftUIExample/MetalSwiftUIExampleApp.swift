@@ -1,10 +1,3 @@
-//
-//  MetalSwiftUIExampleApp.swift
-//  MetalSwiftUIExample
-//
-//  Created by Ralf Ebert on 11.04.24.
-//
-
 import SwiftUI
 
 @main

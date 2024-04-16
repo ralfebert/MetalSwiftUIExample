@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BF7F266E2BCE6EE9003894F0 /* DraggableExampleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7F266D2BCE6EE9003894F0 /* DraggableExampleView.swift */; };
+		BF7F26702BCE7224003894F0 /* CubeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7F266F2BCE7224003894F0 /* CubeView.swift */; };
 		BFA2D6532BC7C1ED00F73DDA /* MetalSwiftUIExampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFA2D6522BC7C1ED00F73DDA /* MetalSwiftUIExampleApp.swift */; };
 		BFA2D6552BC7C1ED00F73DDA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFA2D6542BC7C1ED00F73DDA /* ContentView.swift */; };
 		BFA2D6572BC7C1EE00F73DDA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BFA2D6562BC7C1EE00F73DDA /* Assets.xcassets */; };
@@ -17,6 +19,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		BF7F266D2BCE6EE9003894F0 /* DraggableExampleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraggableExampleView.swift; sourceTree = "<group>"; };
+		BF7F266F2BCE7224003894F0 /* CubeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CubeView.swift; sourceTree = "<group>"; };
 		BFA2D64F2BC7C1ED00F73DDA /* MetalSwiftUIExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetalSwiftUIExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFA2D6522BC7C1ED00F73DDA /* MetalSwiftUIExampleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalSwiftUIExampleApp.swift; sourceTree = "<group>"; };
 		BFA2D6542BC7C1ED00F73DDA /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -66,6 +70,8 @@
 				BFA2D6822BC7C22400F73DDA /* Renderer.swift */,
 				BFA2D6852BC7C22400F73DDA /* Shaders.metal */,
 				BFA2D6832BC7C22400F73DDA /* ShaderTypes.h */,
+				BF7F266D2BCE6EE9003894F0 /* DraggableExampleView.swift */,
+				BF7F266F2BCE7224003894F0 /* CubeView.swift */,
 			);
 			path = MetalSwiftUIExample;
 			sourceTree = "<group>";
@@ -148,7 +154,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BF7F26702BCE7224003894F0 /* CubeView.swift in Sources */,
 				BFA2D6872BC7C22400F73DDA /* GameViewController.swift in Sources */,
+				BF7F266E2BCE6EE9003894F0 /* DraggableExampleView.swift in Sources */,
 				BFA2D6552BC7C1ED00F73DDA /* ContentView.swift in Sources */,
 				BFA2D6862BC7C22400F73DDA /* Renderer.swift in Sources */,
 				BFA2D6532BC7C1ED00F73DDA /* MetalSwiftUIExampleApp.swift in Sources */,

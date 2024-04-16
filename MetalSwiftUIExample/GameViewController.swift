@@ -1,23 +1,20 @@
-//
-//  GameViewController.swift
-//  MetalGame
-//
-//  Created by Ralf Ebert on 11.04.24.
-//
-
-import UIKit
 import MetalKit
+import UIKit
 
 // Our iOS specific view controller
 class GameViewController: UIViewController {
-
     var renderer: Renderer!
     var mtkView: MTKView!
+    
+    var speed: Float {
+        get { renderer.speed }
+        set { renderer.speed = newValue }
+    }
 
     override func loadView() {
-        self.view = MTKView()
+        view = MTKView()
     }
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -31,7 +28,7 @@ class GameViewController: UIViewController {
             print("Metal is not supported")
             return
         }
-        
+
         mtkView.device = defaultDevice
         mtkView.backgroundColor = UIColor.black
 
