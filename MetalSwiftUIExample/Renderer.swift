@@ -14,12 +14,11 @@ enum RendererError: Error {
     case badVertexDescriptor
 }
 
-class Renderer: NSObject, MTKViewDelegate {
+class Renderer: NSObject, MetalViewDelegate {
     public let device: MTLDevice
     let commandQueue: MTLCommandQueue
     var dynamicUniformBuffer: MTLBuffer
     var pipelineState: MTLRenderPipelineState
-    var depthState: MTLDepthStencilState
     var colorMap: MTLTexture
 
     let inFlightSemaphore = DispatchSemaphore(value: maxBuffersInFlight)
@@ -41,8 +40,8 @@ class Renderer: NSObject, MTKViewDelegate {
     let log = Logger(subsystem: "com.example.ExampleApp", category: "Renderer")
     let signposter = OSSignposter()
 
-    init?(metalKitView: MTKView) {
-        device = metalKitView.device!
+    init?(metalView: MetalView) {
+        device = metalView.device
         guard let queue = device.makeCommandQueue() else { return nil }
         commandQueue = queue
 
@@ -55,26 +54,16 @@ class Renderer: NSObject, MTKViewDelegate {
 
         uniforms = UnsafeMutableRawPointer(dynamicUniformBuffer.contents()).bindMemory(to: Uniforms.self, capacity: 1)
 
-        metalKitView.depthStencilPixelFormat = MTLPixelFormat.depth32Float_stencil8
-        metalKitView.colorPixelFormat = MTLPixelFormat.bgra8Unorm_srgb
-        metalKitView.sampleCount = 1
-
         let mtlVertexDescriptor = Renderer.buildMetalVertexDescriptor()
 
         do {
             pipelineState = try Renderer.buildRenderPipelineWithDevice(device: device,
-                                                                       metalKitView: metalKitView,
+                                                                       metalKitView: metalView,
                                                                        mtlVertexDescriptor: mtlVertexDescriptor)
         } catch {
             print("Unable to compile render pipeline state.  Error info: \(error)")
             return nil
         }
-
-        let depthStateDescriptor = MTLDepthStencilDescriptor()
-        depthStateDescriptor.depthCompareFunction = MTLCompareFunction.less
-        depthStateDescriptor.isDepthWriteEnabled = true
-        guard let state = device.makeDepthStencilState(descriptor: depthStateDescriptor) else { return nil }
-        depthState = state
 
         do {
             mesh = try Renderer.buildMesh(device: device, mtlVertexDescriptor: mtlVertexDescriptor)
@@ -119,7 +108,7 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     class func buildRenderPipelineWithDevice(device: MTLDevice,
-                                             metalKitView: MTKView,
+                                             metalKitView: MetalView,
                                              mtlVertexDescriptor: MTLVertexDescriptor) throws -> MTLRenderPipelineState
     {
         /// Build a render state pipeline object
@@ -131,14 +120,12 @@ class Renderer: NSObject, MTKViewDelegate {
 
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.label = "RenderPipeline"
-        pipelineDescriptor.rasterSampleCount = metalKitView.sampleCount
+        pipelineDescriptor.rasterSampleCount = 1
         pipelineDescriptor.vertexFunction = vertexFunction
         pipelineDescriptor.fragmentFunction = fragmentFunction
         pipelineDescriptor.vertexDescriptor = mtlVertexDescriptor
 
         pipelineDescriptor.colorAttachments[0].pixelFormat = metalKitView.colorPixelFormat
-        pipelineDescriptor.depthAttachmentPixelFormat = metalKitView.depthStencilPixelFormat
-        pipelineDescriptor.stencilAttachmentPixelFormat = metalKitView.depthStencilPixelFormat
 
         return try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
     }
@@ -209,7 +196,7 @@ class Renderer: NSObject, MTKViewDelegate {
         rotation += (0.01 * speed)
     }
 
-    func draw(in view: MTKView) {
+    func draw(in view: MetalView) {
 
         let signpostID = signposter.makeSignpostID()
         let signpostName: StaticString = "Renderer draw"
@@ -235,17 +222,21 @@ class Renderer: NSObject, MTKViewDelegate {
 
             let drawableStartTime = CACurrentMediaTime()
 
-            /// Delay getting the currentRenderPassDescriptor until we absolutely need it to avoid
-            ///   holding onto the drawable and blocking the display pipeline any longer than necessary
-            guard let drawable = view.currentDrawable, let renderPassDescriptor = view.currentRenderPassDescriptor else {
-                self.log.warning("drawable/renderPassDescriptor was nil, skipping frame")
+            guard let drawable = view.metalLayer.nextDrawable() else {
+                self.log.warning("drawable was nil, skipping frame")
                 return
             }
-
+            
+            let renderPassDescriptor = MTLRenderPassDescriptor()
+            renderPassDescriptor.colorAttachments[0].texture = drawable.texture
+            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0.5, blue: 1, alpha: 1)
+            renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreAction.store
+            renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadAction.clear
+            
             let waitTime = Double(CACurrentMediaTime() - drawableStartTime) * 1000
             if waitTime > 5.0 {
-                self.log.warning("⚠️ waited \(Int(waitTime)) ms for currentDrawable/currentRenderPassDescriptor")
-                self.signposter.emitEvent("currentDrawable stalled", "⚠️ waited \(Int(waitTime)) ms for currentDrawable")
+                self.log.warning("⚠️ waited \(Int(waitTime)) ms for nextDrawable")
+                self.signposter.emitEvent("nextDrawable stalled", "⚠️ waited \(Int(waitTime)) ms for nextDrawable")
             }
 
             if let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) {
@@ -259,8 +250,6 @@ class Renderer: NSObject, MTKViewDelegate {
                 renderEncoder.setFrontFacing(.counterClockwise)
 
                 renderEncoder.setRenderPipelineState(pipelineState)
-
-                renderEncoder.setDepthStencilState(depthState)
 
                 renderEncoder.setVertexBuffer(dynamicUniformBuffer, offset: uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
                 renderEncoder.setFragmentBuffer(dynamicUniformBuffer, offset: uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
@@ -297,7 +286,7 @@ class Renderer: NSObject, MTKViewDelegate {
         }
     }
 
-    func mtkView(_: MTKView, drawableSizeWillChange size: CGSize) {
+    func mtkView(_: MetalView, drawableSizeWillChange size: CGSize) {
         /// Respond to drawable size or orientation changes here
 
         let aspect = Float(size.width) / Float(size.height)
