@@ -31,6 +31,7 @@ class GameViewController: UIViewController {
 
         mtkView.device = defaultDevice
         mtkView.backgroundColor = UIColor.black
+        mtkView.presentsWithTransaction = true
 
         guard let newRenderer = Renderer(metalKitView: mtkView) else {
             print("Renderer cannot be initialized")

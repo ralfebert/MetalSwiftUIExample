@@ -290,10 +290,11 @@ class Renderer: NSObject, MTKViewDelegate {
 
                 renderEncoder.endEncoding()
 
-                commandBuffer.present(drawable)
             }
 
             commandBuffer.commit()
+            commandBuffer.waitUntilScheduled()
+            drawable.present()
         }
     }
 
